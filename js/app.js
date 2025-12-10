@@ -1023,7 +1023,9 @@ function crearPantalla4() {
 
     btnAtras.addEventListener('click', () => mostrarPantalla(3));
     btnCalcular.addEventListener('click', () => {
-        // Guardar configuración de inversión
+        // ============================================
+        // PASO 1: GUARDAR CONFIGURACIÓN DE INVERSIÓN
+        // ============================================
         let fondo = fondoSelect.value;
         let isin = '';
         let comision = parseFloat(comisionInput.value) || 0;
@@ -1041,21 +1043,83 @@ function crearPantalla4() {
 
         const rentabilidad = parseFloat(rentabilidadInput.value) || 0;
 
+        // Guardar en planData
         setConfiguracionInversion(fondo, comision, rentabilidad, isin);
 
-        // Validar todo
+        // ============================================
+        // PASO 2: VALIDAR DATOS
+        // ============================================
         const validacion = validarDatos();
         if (!validacion.valido) {
-            alert('Errores encontrados:\n' + validacion.errores.join('\n'));
+            console.error('❌ Validación fallida:', validacion.errores);
+            alert('❌ Errores encontrados:\n' + validacion.errores.join('\n'));
             return;
         }
 
-        // Mostrar resumen
-        console.log("Plan completado:");
-        resumenPlan();
+        console.log('✅ Validación pasada');
 
-        alert('✅ Plan creado correctamente. Próximamente verás los resultados.');
-        // Aquí iría a Fase 2 (pantalla de resultados)
+        // ============================================
+        // PASO 3: CALCULAR PLAN COMPLETO
+        // ============================================
+        const resultado = calcularPlanCompleto(planData);
+        
+        // Guardar en variable global para Fase 3
+        window.resultadoCalculos = resultado;
+        window.planDataGlobal = planData; // Para acceso posterior
+
+        // ============================================
+        // PASO 4: VALIDAR RESULTADO DE CÁLCULOS
+        // ============================================
+        if (!resultado.valido) {
+            console.error('❌ Error en cálculos:', resultado.errores);
+            alert('❌ Error en los cálculos:\n' + resultado.errores.join('\n'));
+            return;
+        }
+
+        console.log('✅ Cálculos completados exitosamente');
+        console.log('📊 Proyección 20 años: €' + Math.round(resultado.proyecciones[20].valor));
+
+        // ============================================
+        // PASO 5: MOSTRAR WARNINGS (SI HAY)
+        // ============================================
+        if (resultado.warnings && resultado.warnings.length > 0) {
+            console.group('⚠️ ADVERTENCIAS');
+            resultado.warnings.forEach(warning => {
+                const emoji = warning.tipo === 'error' ? '❌' : 
+                            warning.tipo === 'warning' ? '⚠️' : 'ℹ️';
+                console.log(`${emoji} [${warning.tipo.toUpperCase()}] ${warning.mensaje}`);
+            });
+            console.groupEnd();
+        }
+
+        const carteraFinal = resultado.cartera[resultado.cartera.length - 1]; // Obtener el último mes
+        const proyeccion20 = resultado.proyecciones[20]; // Obtener el resumen de 20 años
+
+        // ============================================
+        // PASO 6: MOSTRAR RESUMEN EN CONSOLA
+        // ============================================
+        console.group('📊 RESUMEN DEL PLAN');
+        console.log('Meses calculados:', resultado.planMensual.length);
+        // CORRECCIÓN 2: Usar el último elemento de la cartera (o el resumen de 20 años)
+        console.log('Valor cartera (mes 240):', Math.round(carteraFinal.valor)); 
+        console.log('Aportado total:', Math.round(proyeccion20.aportado));
+        console.log('Ganancias:', Math.round(proyeccion20.ganancias));
+        console.groupEnd();
+
+        // ============================================
+        // PASO 7: PREPARAR PARA FASE 3
+        // ============================================
+        // Mostrar mensaje de éxito
+        alert('✅ Plan creado correctamente!\n\nVer consola (F12) para detalles.\n\nProximamente: Pantalla de Resultados (Fase 3)');
+        
+        // Log para debug
+        console.log('📌 Datos disponibles en consola:');
+        console.log('   - window.resultadoCalculos (objeto completo)');
+        console.log('   - window.planDataGlobal (datos de entrada)');
+        console.log('\nProyecciones:');
+        console.log('   - 5 años: €' + Math.round(resultado.proyecciones[5].valor));
+        console.log('   - 10 años: €' + Math.round(resultado.proyecciones[10].valor));
+        console.log('   - 20 años: €' + Math.round(resultado.proyecciones[20].valor));
     });
 
     return screen;
